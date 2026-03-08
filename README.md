@@ -14,15 +14,13 @@ A single-operator cognitive workbench that combines research synthesis, multi-pe
 
 Five layers: interaction, orchestration, capability, protocol, evaluation — with traces, storage, and skills cutting across all of them. Provider-agnostic. Skills-based internal control (Claude Skills standard). Integrated evaluation spine for measurable improvement.
 
-Full details in `docs/`.
-
 ## Documents
 
 | Document | Purpose |
 |----------|---------|
-| `docs/design_document.md` | Vision, principles, product boundaries |
-| `docs/technical_specification.md` | Architecture, modules, interfaces, data models |
-| `docs/roadmap.md` | 55 atomic work packages with acceptance criteria |
+| `design_document.md` | Vision, principles, product boundaries |
+| `technical_specification.md` | Architecture, modules, interfaces, data models |
+| `roadmap.md` | 55 atomic work packages with acceptance criteria |
 
 ## Stack
 
