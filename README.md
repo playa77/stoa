@@ -18,8 +18,8 @@ Five layers: interaction, orchestration, capability, protocol, evaluation — wi
 
 | Document | Purpose |
 |----------|---------|
-| `design_document.md` | Vision, principles, product boundaries |
-| `technical_specification.md` | Architecture, modules, interfaces, data models |
+| `design_doc.md` | Vision, principles, product boundaries |
+| `tech_spec.md` | Architecture, modules, interfaces, data models |
 | `roadmap.md` | 55 atomic work packages with acceptance criteria |
 
 ## Stack
