@@ -1,2 +1,0 @@
-create tags/labels that actually do something to any object, and actually create that particular abstraction, in regards to the labeled object, which than can be retrieved by anyone, later, if possible.
-example: "specs"
