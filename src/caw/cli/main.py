@@ -12,6 +12,8 @@ from rich.console import Console
 from caw.__version__ import __version__
 from caw.api.app import create_app
 from caw.api.deps import redact_config_for_display
+from caw.capabilities.deliberation.engine import DeliberationEngine
+from caw.capabilities.deliberation.frames import FrameConfig
 from caw.capabilities.research.ingest import IngestPipeline, SourceInput
 from caw.capabilities.research.retrieve import Retriever
 from caw.capabilities.research.synthesize import Synthesizer
@@ -23,6 +25,7 @@ from caw.core.session import SessionManager
 from caw.models import SessionMode
 from caw.protocols.mock import MockProvider
 from caw.protocols.registry import ProviderRegistry
+from caw.skills.loader import SkillDocument
 from caw.skills.registry import SkillRegistry
 from caw.storage.database import Database
 from caw.storage.repository import (
@@ -235,6 +238,65 @@ def research_query(question: str) -> None:
             ).synthesize(question, retrieval_results, session_id=session.id)
             for claim in synthesis.claims:
                 click.echo(f"- {claim.text} ({', '.join(claim.citation_ids)})")
+        finally:
+            await collector.stop()
+            await database.close()
+
+    asyncio.run(_run())
+
+
+@cli.command("deliberate")
+@click.argument("question", type=str)
+def deliberate(question: str) -> None:
+    """Run a deliberation workflow over a question and print the result."""
+
+    async def _run() -> None:
+        config = load_config()
+        database = Database(config.storage)
+        await database.connect()
+        await database.run_migrations()
+
+        trace_repo = TraceEventRepository(database)
+        collector = TraceCollector(trace_repo, flush_threshold=1)
+        await collector.start()
+
+        try:
+            provider_registry = ProviderRegistry(config)
+            if not provider_registry.list_providers():
+                provider_registry._providers["primary"] = MockProvider()
+
+            skill_registry = SkillRegistry(config.skills)
+            skill_registry.load()
+            if not skill_registry.list_skills():
+                skill_registry._skills["caw.deliberation.pro"] = SkillDocument(
+                    skill_id="caw.deliberation.pro",
+                    version="1.0.0",
+                    name="Pro",
+                    description="Supportive frame",
+                    author="caw",
+                    body="Argue in favor of practical execution.",
+                )
+                skill_registry._skills["caw.deliberation.con"] = SkillDocument(
+                    skill_id="caw.deliberation.con",
+                    version="1.0.0",
+                    name="Con",
+                    description="Critical frame",
+                    author="caw",
+                    body="Challenge assumptions and identify risks.",
+                )
+
+            engine = DeliberationEngine(provider_registry, skill_registry, collector)
+            result = await engine.deliberate(
+                question=question,
+                frames=[
+                    FrameConfig(frame_id="pro", skill_id="caw.deliberation.pro", label="Pro"),
+                    FrameConfig(frame_id="con", skill_id="caw.deliberation.con", label="Con"),
+                ],
+                session_id="cli-deliberation",
+            )
+            click.echo(f"Question: {result.question}")
+            for frame in result.frames:
+                click.echo(f"[{frame.label}] {frame.position}")
         finally:
             await collector.stop()
             await database.close()

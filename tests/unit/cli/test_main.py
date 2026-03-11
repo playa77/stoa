@@ -43,3 +43,12 @@ db_path = "./.caw-data/test.db"
         result = runner.invoke(cli, ["db", "init"])
         assert result.exit_code == 0
         assert Path(".caw-data/test.db").exists()
+
+
+def test_deliberate_command() -> None:
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        Path("caw.toml").write_text('[storage]\ndb_path = ":memory:"\n')
+        result = runner.invoke(cli, ["deliberate", "What should we do?"])
+    assert result.exit_code == 0
+    assert "Question:" in result.output
