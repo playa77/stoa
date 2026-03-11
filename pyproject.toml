@@ -12,6 +12,7 @@ dependencies = [
     "anthropic>=0.40",
     "httpx>=0.27",
     "openai>=1.50",
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
