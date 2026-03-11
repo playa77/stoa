@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import click
 import uvicorn
@@ -11,16 +12,25 @@ from rich.console import Console
 from caw.__version__ import __version__
 from caw.api.app import create_app
 from caw.api.deps import redact_config_for_display
+from caw.capabilities.research.ingest import IngestPipeline, SourceInput
+from caw.capabilities.research.retrieve import Retriever
+from caw.capabilities.research.synthesize import Synthesizer
 from caw.core.config import load_config
 from caw.core.engine import Engine, ExecutionRequest
 from caw.core.permissions import PermissionGate
 from caw.core.router import Router
 from caw.core.session import SessionManager
 from caw.models import SessionMode
+from caw.protocols.mock import MockProvider
 from caw.protocols.registry import ProviderRegistry
 from caw.skills.registry import SkillRegistry
 from caw.storage.database import Database
-from caw.storage.repository import MessageRepository, SessionRepository, TraceEventRepository
+from caw.storage.repository import (
+    MessageRepository,
+    SessionRepository,
+    SourceRepository,
+    TraceEventRepository,
+)
 from caw.traces.collector import TraceCollector
 
 console = Console()
@@ -152,3 +162,81 @@ def chat() -> None:
             await database.close()
 
     asyncio.run(_chat())
+
+
+@cli.group("research")
+def research_group() -> None:
+    """Research workflow commands."""
+
+
+@research_group.command("ingest")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+def research_ingest(path: Path) -> None:
+    """Ingest a source file into a new research session."""
+
+    async def _run() -> None:
+        config = load_config()
+        database = Database(config.storage)
+        await database.connect()
+        await database.run_migrations()
+
+        trace_repo = TraceEventRepository(database)
+        collector = TraceCollector(trace_repo, flush_threshold=1)
+        await collector.start()
+
+        try:
+            session_manager = SessionManager(
+                SessionRepository(database), MessageRepository(database)
+            )
+            session = await session_manager.create(mode=SessionMode.RESEARCH)
+            pipeline = IngestPipeline(SourceRepository(database), database, collector)
+            source = await pipeline.ingest(SourceInput(session_id=session.id, path=path))
+            click.echo(f"Ingested source {source.id} into session {session.id}")
+        finally:
+            await collector.stop()
+            await database.close()
+
+    asyncio.run(_run())
+
+
+@research_group.command("query")
+@click.argument("question", type=str)
+def research_query(question: str) -> None:
+    """Run retrieval + synthesis for a question over existing research sources."""
+
+    async def _run() -> None:
+        config = load_config()
+        database = Database(config.storage)
+        await database.connect()
+        await database.run_migrations()
+
+        trace_repo = TraceEventRepository(database)
+        collector = TraceCollector(trace_repo, flush_threshold=1)
+        await collector.start()
+
+        try:
+            provider_registry = ProviderRegistry(config)
+            if not provider_registry.list_providers():
+                provider_registry._providers["primary"] = MockProvider()
+            session_manager = SessionManager(
+                SessionRepository(database), MessageRepository(database)
+            )
+            session = await session_manager.create(mode=SessionMode.RESEARCH)
+
+            retriever = Retriever(database, collector)
+            retrieval_results = await retriever.retrieve(question, session.id)
+            provider_key = provider_registry.list_providers()[0]
+            synthesis = await Synthesizer(
+                provider=provider_registry.get(provider_key),
+                trace_collector=collector,
+                model=config.providers.get(provider_key).default_model
+                if provider_key in config.providers
+                else "mock-model",
+            ).synthesize(question, retrieval_results, session_id=session.id)
+            for claim in synthesis.claims:
+                click.echo(f"- {claim.text} ({', '.join(claim.citation_ids)})")
+        finally:
+            await collector.stop()
+            await database.close()
+
+    asyncio.run(_run())

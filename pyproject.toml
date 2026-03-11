@@ -17,6 +17,9 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "click>=8.0",
     "rich>=13.0",
+    "pypdf>=4.0",
+    "beautifulsoup4>=4.12",
+    "markdownify>=0.12",
 ]
 
 [project.scripts]
