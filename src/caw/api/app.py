@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from caw.api.deps import AppServices, build_services, shutdown_services
 from caw.api.routes.chat import router as chat_router
 from caw.api.routes.deliberation import router as deliberation_router
+from caw.api.routes.evaluation import router as evaluation_router
 from caw.api.routes.research import router as research_router
 from caw.api.routes.sessions import router as sessions_router
 from caw.api.routes.skills import router as skills_router
@@ -103,5 +104,6 @@ def create_app(config: CAWConfig | None = None) -> FastAPI:
     app.include_router(research_router)
     app.include_router(deliberation_router)
     app.include_router(workspace_router)
+    app.include_router(evaluation_router)
 
     return app

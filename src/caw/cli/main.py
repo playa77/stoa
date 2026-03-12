@@ -22,6 +22,10 @@ from caw.core.engine import Engine, ExecutionRequest
 from caw.core.permissions import PermissionGate
 from caw.core.router import Router
 from caw.core.session import SessionManager
+from caw.evaluation.comparator import Comparator
+from caw.evaluation.runner import EvalRunner
+from caw.evaluation.scorer import LatencyScorer, TokenEfficiencyScorer
+from caw.evaluation.tasks import load_tasks
 from caw.models import SessionMode
 from caw.protocols.mock import MockProvider
 from caw.protocols.registry import ProviderRegistry
@@ -29,6 +33,7 @@ from caw.skills.loader import SkillDocument
 from caw.skills.registry import SkillRegistry
 from caw.storage.database import Database
 from caw.storage.repository import (
+    EvalRunRepository,
     MessageRepository,
     SessionRepository,
     SourceRepository,
@@ -299,6 +304,98 @@ def deliberate(question: str) -> None:
                 click.echo(f"[{frame.label}] {frame.position}")
         finally:
             await collector.stop()
+            await database.close()
+
+    asyncio.run(_run())
+
+
+@cli.group("eval")
+def eval_group() -> None:
+    """Evaluation workflow commands."""
+
+
+@eval_group.command("run")
+@click.argument("task_id", type=str)
+def eval_run(task_id: str) -> None:
+    """Run one evaluation task by task ID."""
+
+    async def _run() -> None:
+        config = load_config()
+        database = Database(config.storage)
+        await database.connect()
+        await database.run_migrations()
+
+        trace_repo = TraceEventRepository(database)
+        collector = TraceCollector(trace_repo, flush_threshold=1)
+        await collector.start()
+
+        try:
+            provider_registry = ProviderRegistry(config)
+            if not provider_registry.list_providers():
+                provider_registry._providers["primary"] = MockProvider()
+
+            skill_registry = SkillRegistry(config.skills)
+            skill_registry.load()
+
+            session_manager = SessionManager(
+                SessionRepository(database),
+                MessageRepository(database),
+            )
+            engine = Engine(
+                config=config,
+                session_manager=session_manager,
+                router=Router(config, provider_registry),
+                permission_gate=PermissionGate(config.workspace, collector),
+                skill_registry=skill_registry,
+                trace_collector=collector,
+                provider_registry=provider_registry,
+                message_repo=MessageRepository(database),
+            )
+
+            task = next(
+                (
+                    item
+                    for item in load_tasks(Path(config.evaluation.tasks_dir))
+                    if item.task_id == task_id
+                ),
+                None,
+            )
+            if task is None:
+                click.echo(f"Task not found: {task_id}")
+                return
+
+            runner = EvalRunner(
+                engine=engine,
+                session_manager=session_manager,
+                eval_repo=EvalRunRepository(database),
+                trace_collector=collector,
+                scorers=[LatencyScorer(), TokenEfficiencyScorer()],
+            )
+            result = await runner.run_task(task)
+            click.echo(f"Run: {result.run.id}")
+            click.echo(f"Scores: {result.run.scores}")
+        finally:
+            await collector.stop()
+            await database.close()
+
+    asyncio.run(_run())
+
+
+@eval_group.command("compare")
+@click.argument("run_id_a", type=str)
+@click.argument("run_id_b", type=str)
+def eval_compare(run_id_a: str, run_id_b: str) -> None:
+    """Compare two evaluation runs by ID."""
+
+    async def _run() -> None:
+        config = load_config()
+        database = Database(config.storage)
+        await database.connect()
+        await database.run_migrations()
+        try:
+            result = await Comparator(EvalRunRepository(database)).compare([run_id_a, run_id_b])
+            click.echo(result.matrix)
+        finally:
             await database.close()
 
     asyncio.run(_run())
