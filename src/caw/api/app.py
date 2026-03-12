@@ -16,6 +16,7 @@ from caw.api.routes.research import router as research_router
 from caw.api.routes.sessions import router as sessions_router
 from caw.api.routes.skills import router as skills_router
 from caw.api.routes.traces import router as traces_router
+from caw.api.routes.workspace import router as workspace_router
 from caw.api.schemas import APIResponse
 from caw.api.websocket import handle_session_stream
 from caw.errors import (
@@ -101,5 +102,6 @@ def create_app(config: CAWConfig | None = None) -> FastAPI:
     app.include_router(skills_router)
     app.include_router(research_router)
     app.include_router(deliberation_router)
+    app.include_router(workspace_router)
 
     return app

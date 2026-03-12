@@ -48,11 +48,13 @@ async def build_test_services() -> AppServices:
     message_repository = MessageRepository(db)
     skill_registry = SkillRegistry(config.skills)
 
+    permission_gate = PermissionGate(config.workspace, collector)
+
     engine = Engine(
         config=config,
         session_manager=session_manager,
         router=Router(config, provider_registry),
-        permission_gate=PermissionGate(config.workspace, collector),
+        permission_gate=permission_gate,
         skill_registry=skill_registry,
         trace_collector=collector,
         provider_registry=provider_registry,
@@ -69,6 +71,7 @@ async def build_test_services() -> AppServices:
         provider_registry=provider_registry,
         skill_registry=skill_registry,
         engine=engine,
+        permission_gate=permission_gate,
     )
 
 

@@ -35,6 +35,7 @@ class AppServices:
     provider_registry: ProviderRegistry
     skill_registry: SkillRegistry
     engine: Engine
+    permission_gate: PermissionGate
 
 
 async def build_services(config: CAWConfig | None = None) -> AppServices:
@@ -58,11 +59,13 @@ async def build_services(config: CAWConfig | None = None) -> AppServices:
     skill_registry.load()
 
     session_manager = SessionManager(session_repo, message_repo)
+    permission_gate = PermissionGate(resolved_config.workspace, trace_collector)
+
     engine = Engine(
         config=resolved_config,
         session_manager=session_manager,
         router=Router(resolved_config, provider_registry),
-        permission_gate=PermissionGate(resolved_config.workspace, trace_collector),
+        permission_gate=permission_gate,
         skill_registry=skill_registry,
         trace_collector=trace_collector,
         provider_registry=provider_registry,
@@ -81,6 +84,7 @@ async def build_services(config: CAWConfig | None = None) -> AppServices:
         provider_registry=provider_registry,
         skill_registry=skill_registry,
         engine=engine,
+        permission_gate=permission_gate,
     )
 
 
