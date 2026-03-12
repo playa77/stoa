@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from caw.capabilities.workspace.local import PathPolicy
+from caw.core.approvals import ApprovalManager
 from caw.errors import PermissionError_
 from caw.models import PermissionLevel, TraceEvent
 
@@ -28,10 +29,12 @@ class WorkspaceWriter:
         config: WorkspaceConfig,
         collector: TraceCollector,
         gate: PermissionGate,
+        approval_manager: ApprovalManager | None = None,
     ) -> None:
         self._policy = PathPolicy(config)
         self._collector = collector
         self._gate = gate
+        self._approval_manager = approval_manager
 
     async def write_file(
         self, path: str, content: str, session_id: str, trace_id: str
@@ -102,11 +105,14 @@ class WorkspaceWriter:
     ) -> None:
         approval = await self._gate.check(level, action, resources, trace_id, session_id)
         if approval is not None:
-            raise PermissionError_(
-                "Workspace mutation requires approval",
-                "approval_required",
-                details={"approval_id": approval.id, "action": action},
-            )
+            if self._approval_manager is None:
+                raise PermissionError_(
+                    "Workspace mutation requires approval",
+                    "approval_required",
+                    details={"approval_id": approval.id, "action": action},
+                )
+            await self._approval_manager.register(approval)
+            await self._approval_manager.await_decision(approval)
 
     async def _emit(
         self,

@@ -159,6 +159,23 @@ class ApprovalRequest:
     timeout_seconds: int = 300
 
 
+class ApprovalStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    DENIED = "denied"
+    EXPIRED = "expired"
+
+
+@dataclass
+class ApprovalRecord:
+    request: ApprovalRequest
+    status: ApprovalStatus = ApprovalStatus.PENDING
+    created_at: datetime = field(default_factory=_utcnow)
+    resolved_at: datetime | None = None
+    resolved_by: str | None = None
+    reason: str | None = None
+
+
 @dataclass
 class ApprovalResponse:
     request_id: str = ""

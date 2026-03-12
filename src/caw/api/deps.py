@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from caw.core.approvals import ApprovalManager
 from caw.core.config import CAWConfig, load_config
 from caw.core.engine import Engine
 from caw.core.permissions import PermissionGate
@@ -14,6 +15,7 @@ from caw.core.session import SessionManager
 from caw.protocols.registry import ProviderRegistry
 from caw.skills.registry import SkillRegistry
 from caw.storage.database import Database
+from caw.storage.approvals import ApprovalRepository
 from caw.storage.repository import MessageRepository, SessionRepository, TraceEventRepository
 from caw.traces.collector import TraceCollector
 from caw.traces.replay import ReplayEngine
@@ -36,6 +38,7 @@ class AppServices:
     skill_registry: SkillRegistry
     engine: Engine
     permission_gate: PermissionGate
+    approval_manager: ApprovalManager
 
 
 async def build_services(config: CAWConfig | None = None) -> AppServices:
@@ -60,6 +63,7 @@ async def build_services(config: CAWConfig | None = None) -> AppServices:
 
     session_manager = SessionManager(session_repo, message_repo)
     permission_gate = PermissionGate(resolved_config.workspace, trace_collector)
+    approval_manager = ApprovalManager(ApprovalRepository(database), trace_collector)
 
     engine = Engine(
         config=resolved_config,
@@ -85,6 +89,7 @@ async def build_services(config: CAWConfig | None = None) -> AppServices:
         skill_registry=skill_registry,
         engine=engine,
         permission_gate=permission_gate,
+        approval_manager=approval_manager,
     )
 
 

@@ -88,7 +88,10 @@ async def write_file(
     services: Annotated[AppServices, Depends(get_services)],
 ) -> APIResponse[dict[str, Any]]:
     writer = WorkspaceWriter(
-        services.config.workspace, services.trace_collector, services.permission_gate
+        services.config.workspace,
+        services.trace_collector,
+        services.permission_gate,
+        services.approval_manager,
     )
     result = await writer.write_file(
         request.path, request.content, request.session_id, request.trace_id

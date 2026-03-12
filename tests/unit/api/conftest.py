@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from caw.api.app import create_app
 from caw.api.deps import AppServices
+from caw.core.approvals import ApprovalManager
 from caw.core.config import CAWConfig
 from caw.core.engine import Engine
 from caw.core.permissions import PermissionGate
@@ -11,6 +12,7 @@ from caw.core.session import SessionManager
 from caw.protocols.mock import MockProvider
 from caw.protocols.registry import ProviderRegistry
 from caw.skills.registry import SkillRegistry
+from caw.storage.approvals import ApprovalRepository
 from caw.storage.database import Database
 from caw.storage.repository import MessageRepository, SessionRepository, TraceEventRepository
 from caw.traces.collector import TraceCollector
@@ -72,6 +74,7 @@ async def build_test_services() -> AppServices:
         skill_registry=skill_registry,
         engine=engine,
         permission_gate=permission_gate,
+        approval_manager=ApprovalManager(ApprovalRepository(db), collector),
     )
 
 
