@@ -111,3 +111,38 @@ def test_unknown_keys_no_crash() -> None:
         user_config_path=Path("/does/not/exist"),
     )
     assert config.general.log_level == "DEBUG"
+
+
+def test_providers_default_string_is_ignored() -> None:
+    config = load_config(
+        overrides={
+            "providers": {
+                "default": "openrouter",
+                "openrouter": {
+                    "type": "openai_compatible",
+                    "api_key_env": "OPENROUTER_API_KEY",
+                    "default_model": "bytedance-seed/seed-2.0-lite",
+                },
+            }
+        },
+        default_config_path=FIXTURE_DIR / "valid_minimal.toml",
+        project_config_path=Path("/does/not/exist"),
+        user_config_path=Path("/does/not/exist"),
+    )
+    assert "openrouter" in config.providers
+    assert "default" not in config.providers
+
+
+def test_load_from_legacy_config_local_toml(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project = tmp_path / "project"
+    (project / "config").mkdir(parents=True)
+    (project / "config/local.toml").write_text('[general]\nlog_level = "ERROR"\n')
+    monkeypatch.chdir(project)
+
+    config = load_config(
+        default_config_path=FIXTURE_DIR / "valid_minimal.toml",
+        project_config_path=Path("/does/not/exist"),
+        user_config_path=Path("/does/not/exist"),
+    )
+
+    assert config.general.log_level == "ERROR"

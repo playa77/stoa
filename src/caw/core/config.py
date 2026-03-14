@@ -9,7 +9,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from caw.errors import ConfigError
 
@@ -115,6 +115,39 @@ class CAWConfig(_BaseConfigModel):
     evaluation: EvaluationConfig = Field(default_factory=EvaluationConfig)
     api: APIConfig = Field(default_factory=APIConfig)
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_provider_defaults(cls, data: Any) -> Any:
+        """Normalize legacy ``[providers] default = \"...\"`` shape.
+
+        Provider definitions are modeled as ``dict[str, ProviderConfig]``. Some
+        config files (including examples) also place ``default = "provider_key"``
+        under ``[providers]``. We currently do not consume that default key for
+        routing, but we should ignore it instead of failing validation.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        providers = data.get("providers")
+        if not isinstance(providers, dict):
+            return data
+
+        default_provider = providers.get("default") if isinstance(providers.get("default"), str) else None
+        provider_entries = {
+            key: value for key, value in providers.items() if isinstance(value, dict)
+        }
+
+        if default_provider in provider_entries:
+            reordered = {default_provider: provider_entries[default_provider]}
+            reordered.update(
+                {key: value for key, value in provider_entries.items() if key != default_provider}
+            )
+            data["providers"] = reordered
+            return data
+
+        data["providers"] = provider_entries
+        return data
+
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = dict(base)
@@ -212,9 +245,11 @@ def load_config(
         Path(__file__).resolve().parents[3] / "config/default.toml"
     )
     resolved_project = project_config_path or Path.cwd() / "caw.toml"
+    resolved_project_legacy = Path.cwd() / "config/local.toml"
     resolved_user = user_config_path or Path("~/.config/caw/config.toml").expanduser()
 
     merged = _read_toml(resolved_default)
+    merged = _deep_merge(merged, _read_toml(resolved_project_legacy))
     merged = _deep_merge(merged, _read_toml(resolved_project))
     merged = _deep_merge(merged, _read_toml(resolved_user))
     merged = _deep_merge(merged, _read_env())
