@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, TypeVar
+from datetime import datetime
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 T = TypeVar("T")
 
