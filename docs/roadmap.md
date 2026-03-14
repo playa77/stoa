@@ -1585,7 +1585,7 @@ class SkillDocument:
     """Parsed skill document.
 
     Attributes:
-        skill_id: Dot-namespaced unique identifier.
+        skill_id: Dot-namespaced unique identifier (lowercase segments; underscores allowed).
         version: SemVer version string.
         name: Human-readable name.
         description: Purpose summary.

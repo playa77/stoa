@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from caw.api.deps import AppServices, build_services, shutdown_services
 from caw.api.routes.approvals import router as approvals_router
@@ -92,6 +92,10 @@ def create_app(config: CAWConfig | None = None) -> FastAPI:
     @app.get("/api/v1/health")
     async def health() -> APIResponse[dict[str, str]]:
         return APIResponse(data={"status": "healthy"})
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> RedirectResponse:
+        return RedirectResponse(url="/docs", status_code=307)
 
     @app.websocket("/api/v1/sessions/{session_id}/stream")
     async def session_stream(websocket: WebSocket, session_id: str) -> None:

@@ -16,7 +16,9 @@ SEMVER_RE = re.compile(
     r"(?:-((?:0|[1-9]\d*|[0-9A-Za-z-]+)(?:\.(?:0|[1-9]\d*|[0-9A-Za-z-]+))*))?"
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
 )
-SKILL_ID_RE = re.compile(r"^[a-z0-9]+(?:\.[a-z0-9]+)+$")
+# Claude Skills format: dot-separated lowercase segments;
+# each segment may include underscores after the first character.
+SKILL_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_]*(?:\.[a-z0-9][a-z0-9_]*)+$")
 
 
 @dataclass
@@ -36,7 +38,8 @@ def validate_skill(skill: object) -> ValidationResult:
     """Validate a loaded skill document.
 
     Checks:
-    1. skill_id is non-empty and matches pattern: lowercase alphanumeric + dots.
+    1. skill_id is non-empty and matches pattern: lowercase dot-separated segments,
+       with optional underscores inside segments.
     2. version is valid SemVer (MAJOR.MINOR.PATCH, optional pre-release).
     3. name is non-empty.
     4. description is non-empty.
@@ -64,7 +67,9 @@ def validate_skill(skill: object) -> ValidationResult:
     if not skill_id:
         errors.append("skill_id is required")
     elif not SKILL_ID_RE.fullmatch(skill_id):
-        errors.append("skill_id must be lowercase alphanumeric segments separated by dots")
+        errors.append(
+            "skill_id must be lowercase dot-separated segments; underscores are allowed"
+        )
 
     if not version:
         errors.append("version is required")

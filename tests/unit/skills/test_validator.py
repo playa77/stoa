@@ -12,6 +12,12 @@ def test_validate_valid() -> None:
     assert result.errors == []
 
 
+def test_validate_valid_with_underscore_skill_id() -> None:
+    result = validate_skill(load_skill(FIXTURES / "valid_full.md"))
+    assert result.valid is True
+    assert result.errors == []
+
+
 def test_validate_missing_id() -> None:
     result = validate_skill(load_skill(FIXTURES / "invalid_missing_id.md"))
     assert result.valid is False

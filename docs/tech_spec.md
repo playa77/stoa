@@ -636,7 +636,7 @@ Research outputs must include...
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `skill_id` | string | yes | Dot-namespaced unique identifier |
+| `skill_id` | string | yes | Dot-namespaced unique identifier (lowercase segments; underscores allowed) |
 | `version` | string (SemVer) | yes | Skill version |
 | `name` | string | yes | Human-readable name |
 | `description` | string | yes | Purpose summary |
