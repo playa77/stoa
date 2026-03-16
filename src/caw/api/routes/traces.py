@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from caw.api.deps import get_replay_engine, get_trace_collector
 from caw.api.schemas import APIResponse, TraceEventResponse
-
-if TYPE_CHECKING:
-    from caw.traces.collector import TraceCollector
-    from caw.traces.replay import ReplayEngine
+from caw.traces.collector import TraceCollector
+from caw.traces.replay import ReplayEngine
 
 router = APIRouter(prefix="/api/v1", tags=["traces"])
 

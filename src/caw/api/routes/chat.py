@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from caw.api.deps import get_engine
 from caw.api.schemas import APIResponse, ExecutionResponse, SendMessageRequest
-from caw.core.engine import ExecutionRequest
-
-if TYPE_CHECKING:
-    from caw.core.engine import Engine
+from caw.core.engine import Engine, ExecutionRequest
 
 router = APIRouter(prefix="/api/v1", tags=["chat"])
 

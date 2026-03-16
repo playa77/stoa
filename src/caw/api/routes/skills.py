@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
 from caw.api.deps import get_provider_registry, get_skill_registry
 from caw.api.schemas import APIResponse, ProviderHealthResponse
-
-if TYPE_CHECKING:
-    from caw.protocols.registry import ProviderRegistry
-    from caw.skills.registry import SkillRegistry
+from caw.protocols.registry import ProviderRegistry
+from caw.skills.registry import SkillRegistry
 
 router = APIRouter(prefix="/api/v1", tags=["skills", "providers"])
 

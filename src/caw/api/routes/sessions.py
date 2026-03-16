@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -17,11 +17,9 @@ from caw.api.schemas import (
     UpdateSessionRequest,
 )
 from caw.models import Message, Session, SessionMode, SessionState
+from caw.core.session import SessionManager
 from caw.storage.repository import SessionRepository
-
-if TYPE_CHECKING:
-    from caw.core.session import SessionManager
-    from caw.storage.repository import MessageRepository
+from caw.storage.repository import MessageRepository
 
 router = APIRouter(prefix="/api/v1", tags=["sessions"])
 

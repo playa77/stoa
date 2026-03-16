@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -14,10 +14,8 @@ from caw.capabilities.research.export import ResearchExporter
 from caw.capabilities.research.ingest import IngestPipeline, SourceInput
 from caw.capabilities.research.retrieve import Retriever
 from caw.capabilities.research.synthesize import Synthesizer
+from caw.protocols.registry import ProviderRegistry
 from caw.storage.repository import ArtifactRepository, SourceRepository
-
-if TYPE_CHECKING:
-    from caw.protocols.registry import ProviderRegistry
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
