@@ -2,7 +2,7 @@
 
 ## Canonical Agent Workbench — API Gateway
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Status:** Ready for implementation
 **Date:** 2026-03-16
 **Companion to:** Technical Specification v1.0.0, Atomic Roadmap v1.0.0
@@ -77,6 +77,10 @@ These work packages are ordered by dependency and risk reduction:
 6. **S-WP07** integrates with the config system and documents everything.
 
 No work package depends on a later one. Each is independently testable and deployable.
+
+### Implementation and testing delegation
+
+The implementing agent owns all code AND test code. Acceptance criteria define what must hold true, not how tests are structured, named, or executed. Test names listed under each work package are suggestions, not mandates. The implementing agent is responsible for choosing a test runner invocation that works in its environment — the roadmap does not prescribe `uv run`, `pytest`, or any other specific command.
 
 ---
 
@@ -225,7 +229,7 @@ def _is_hex(s: str) -> bool:
 7. `load_or_create_api_key()` raises `ConfigError` for a key file containing a hex string of wrong length.
 8. `validate_bearer_token()` returns `True` for matching tokens.
 9. `validate_bearer_token()` returns `False` for non-matching tokens.
-10. `ruff check` and `mypy --strict` pass on `src/caw/api/auth.py`.
+10. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests (`tests/unit/api/test_auth.py`):**
 
@@ -394,7 +398,7 @@ async def health_check() -> dict[str, str]:
 6. The `401` response body contains `{"status": "error", "error_code": "invalid_api_key", ...}`.
 7. The `401` response includes `WWW-Authenticate: Bearer` header.
 8. Every existing route in the application returns `401` without a valid key (no route was missed).
-9. `ruff check` and `mypy --strict` pass.
+9. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests (`tests/unit/api/test_middleware.py`):**
 
@@ -465,7 +469,7 @@ async def session_stream(
 1. WebSocket connection to `/api/v1/sessions/{id}/stream` without `?token=` parameter is rejected with close code 4401.
 2. WebSocket connection with `?token=WRONG_KEY` is rejected with close code 4401.
 3. WebSocket connection with `?token=CORRECT_KEY` is accepted and functions normally.
-4. `ruff check` and `mypy --strict` pass.
+4. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests (`tests/unit/api/test_websocket_auth.py`):**
 
@@ -648,7 +652,7 @@ async def apply_rate_limit(request: Request) -> None:
 5. The `429` response includes `Retry-After` header.
 6. The `429` response body follows the standard error envelope (`status`, `error_code`, `message`).
 7. `GET /health` is NOT rate-limited.
-8. `ruff check` and `mypy --strict` pass.
+8. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests (`tests/unit/api/test_rate_limit.py`):**
 
@@ -720,7 +724,7 @@ Call `validate_bind_safety(config.api.host, config.api.require_auth)` during app
 3. `host="127.0.0.1"` + `require_auth=False` succeeds (loopback is acceptable without auth for local dev).
 4. `host="127.0.0.1"` + `require_auth=True` succeeds.
 5. `host="::1"` + `require_auth=False` succeeds (IPv6 loopback).
-6. `ruff check` and `mypy --strict` pass.
+6. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests (`tests/unit/api/test_bind_safeguard.py`):**
 
@@ -806,7 +810,7 @@ def rotate_key() -> None:
 3. The old key is no longer present in the key file.
 4. The write is atomic (uses temp file + rename).
 5. `caw rotate-key` prints the new key and a restart reminder.
-6. `ruff check` and `mypy --strict` pass.
+6. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests (additions to `tests/unit/api/test_auth.py`):**
 
@@ -868,7 +872,7 @@ Add an entry under `[Unreleased]`:
 2. `config/example.toml` contains the same fields with explanatory comments.
 3. `docs/security.md` exists and covers all six sections listed above.
 4. `CHANGELOG.md` has a `### Security` subsection documenting the breaking changes.
-5. `ruff check` and `mypy --strict` pass on all modified Python files.
+5. All new and modified code passes the project's linting and type-checking standards (see `docs/roadmap.md` §0.5).
 
 **Tests:** None (documentation only).
 
