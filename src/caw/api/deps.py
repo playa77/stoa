@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+
+from fastapi import Request
 
 from caw.core.approvals import ApprovalManager
 from caw.core.config import CAWConfig, load_config
@@ -19,10 +20,6 @@ from caw.storage.approvals import ApprovalRepository
 from caw.storage.repository import MessageRepository, SessionRepository, TraceEventRepository
 from caw.traces.collector import TraceCollector
 from caw.traces.replay import ReplayEngine
-
-if TYPE_CHECKING:
-    from fastapi import Request
-
 
 @dataclass(slots=True)
 class AppServices:
