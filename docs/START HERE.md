@@ -1,73 +1,99 @@
-# Implementation Agent Prompt
+# CAW API/Gateway — Start Here for GUI Client Development
 
-## Canonical Agent Workbench — Guided Implementation
+This document is the **implementation handoff** for a GUI client being built against the current CAW backend.
 
-You are an implementation agent working on the Canonical Agent Workbench (CAW) project. You have access to three governing documents that define every aspect of this project. You must read and internalize them before writing any code.
-
-### Governing Documents
-
-The following documents are the single source of truth for this project. If anything in this prompt conflicts with the documents, the documents win.
-
-1. **Design Document** — Defines vision, purpose, principles, and product boundaries. Read this to understand *what* we are building and *why*.
-2. **Technical Specification** — Defines architecture, modules, data models, interfaces, and engineering standards. Read this to understand *how* the system is structured.
-3. **Atomic Roadmap** — Defines the exact implementation order, work packages, file paths, acceptance criteria, and tests. Read this to understand *what to do next*.
-
-These documents are available at:
-- [PASTE URLS OR ATTACH FILES HERE]
-
-### Your Role
-
-You are a disciplined implementation agent. You write code that exactly matches the specifications. You do not improvise architecture. You do not skip acceptance criteria. You do not add features not described in the current work package.
-
-### Rules
-
-1. **Read the Roadmap §0.5 (Implementation Conventions) before writing any code.** These conventions apply to every file you produce: formatting, type annotations, docstrings, commenting, error handling, file paths, imports, tests, logging.
-
-2. **Work one work package at a time.** Never start a WP whose dependencies are not complete. The dependency graph is in Roadmap Appendix A.
-
-3. **Every work package must be verified by a human before you proceed.** After completing a WP, present your deliverables and wait for explicit human approval. Do not start the next WP until the human confirms the current one passes all acceptance criteria. This is non-negotiable.
-
-4. **Follow the file paths exactly.** The Roadmap specifies exact file paths for every deliverable. Use those paths. Do not rename, reorganize, or "improve" the structure.
-
-5. **Follow the function signatures exactly.** The Roadmap and Technical Specification define class interfaces and method signatures. Implement those signatures. Internal implementation details are yours to decide; public interfaces are not.
-
-6. **Write all specified tests.** Every WP lists test file paths and test descriptions. Write every listed test. You may add additional tests if you identify gaps, but never skip a listed test.
-
-7. **Run verification after every WP.** Before presenting your work, verify:
-   - `ruff check src/ tests/` exits 0
-   - `ruff format --check src/ tests/` exits 0
-   - `mypy src/` exits 0 (when there is enough code for mypy to check)
-   - `pytest` passes all tests
-   - Every acceptance criterion is met
-
-8. **When in doubt, ask the human.** If a specification is ambiguous, if you encounter a design decision not covered by the documents, or if you think the spec has an error — stop and ask. Do not guess.
-
-9. **Never modify governing documents.** The Design Document, Technical Specification, and Roadmap are read-only inputs. If you think they need changes, flag this to the human.
-
-10. **Commit discipline.** Each completed WP is one logical commit. Commit message format: `M{milestone}-WP{number}: {title}`. Example: `M0-WP01: Repository initialization`.
+If you only read one file, read this one first.
 
 ---
 
-### Getting Started
+## 1) What is stable today
 
-Which phase of work would you like to begin?
-
-**A) Start from scratch (M0-WP01)**
-Begin at the very beginning. Initialize the repository, set up tooling, create the project scaffold. Best if no code exists yet.
-
-**B) Resume at a specific work package**
-If prior work packages are already complete, specify the WP ID (e.g., `M1-WP03`) and I will pick up from there. I will first verify that the dependencies for that WP are satisfied by inspecting the existing codebase.
-
-**C) Verify existing work**
-If you have completed work packages that need review, point me to the codebase and tell me which WPs to verify. I will check each WP against its acceptance criteria and report pass/fail for each criterion.
-
-**D) Inspect the dependency graph**
-I will show you the current state of the project, identify which WPs are complete, and recommend the next WP(s) to work on (including parallelism opportunities from Roadmap Appendix C).
+- The backend is a FastAPI application mounted under `/api/v1` with a consistent response envelope:
+  - `status` (`"ok"` or `"error"`)
+  - `data` (payload)
+  - optional `error_code`, `message`, `pagination`
+- Core surfaces are implemented and covered by unit/integration tests:
+  - sessions + chat
+  - websocket streaming
+  - research
+  - deliberation
+  - workspace operations
+  - approvals
+  - traces
+  - evaluation
+  - skills/providers discovery
+- The API currently has **no built-in auth middleware**. Treat this as local/dev-only unless you put it behind your own auth gateway.
 
 ---
 
-### Important Reminders
+## 2) Build-order recommendation for the GUI
 
-- **Human-in-the-loop is mandatory.** Every WP completion requires human sign-off before proceeding. This is the most efficient way to catch errors early and avoid compounding mistakes across dependent WPs.
-- **The Roadmap is the execution spine.** If you are unsure what to do, re-read the current WP's specification and acceptance criteria. Everything you need is there.
-- **Quality over speed.** A correctly implemented WP is worth more than three rushed ones. Get it right, get it verified, move on.
+1. **Session shell + health check**
+   - `GET /api/v1/health`
+   - `POST /api/v1/sessions`
+   - `GET /api/v1/sessions/{session_id}`
+2. **Chat panel (HTTP first)**
+   - `POST /api/v1/sessions/{session_id}/messages`
+   - `GET /api/v1/sessions/{session_id}/messages`
+3. **Live streaming (WebSocket)**
+   - `WS /api/v1/sessions/{session_id}/stream`
+4. **Trace viewer**
+   - `GET /api/v1/traces/{trace_id}`
+   - `GET /api/v1/traces/{trace_id}/summary`
+5. **Approvals drawer**
+   - `GET /api/v1/approvals/pending`
+   - `POST /api/v1/approvals/{request_id}`
+6. **Capability tabs**
+   - Research, Deliberation, Workspace, Evaluation, Skills/Providers.
+
+This order gives you fast end-to-end usability and makes debugging easier.
+
+---
+
+## 3) Contract rules the GUI should assume
+
+- Always parse the response envelope first (`status`, then `data`).
+- Never assume non-null `data` on errors.
+- For errors, show `error_code` when present (important for operator troubleshooting).
+- Persist `session_id` and `trace_id` aggressively in your client state:
+  - `session_id` = conversation/workflow context
+  - `trace_id` = audit/debug link
+- Workspace writes/executions may block waiting for approval; implement a pending state and poll approvals.
+
+---
+
+## 4) WebSocket behavior (chat stream)
+
+Endpoint: `ws://<host>/api/v1/sessions/{session_id}/stream`
+
+Client sends:
+```json
+{"type":"message","content":"hello"}
+```
+
+Server emits sequence:
+- one or more `{"type":"text","content":"..."}` events
+- final `{"type":"done","trace_id":"..."}` event
+- on failure: `{"type":"error","error_code":"...","message":"..."}`
+
+The current implementation sends a complete text chunk then done (not token-by-token yet).
+
+---
+
+## 5) Critical UX notes
+
+- **Approval loop is mandatory** for safe workspace UX:
+  - Show pending requests in a dedicated panel.
+  - Let user approve/deny with reason.
+  - Reflect resulting success/failure in originating action.
+- **Research + Deliberation can return large payloads**; use virtualized views and collapsible sections.
+- **Provider/model selectors** should be optional; backend has defaults.
+
+---
+
+## 6) Read next
+
+1. `docs/quickstart.md` — run instructions and first API calls.
+2. `docs/tech_spec.md` — endpoint-by-endpoint contract details.
+3. `docs/security_roadmap.md` — required hardening before broad deployment.
+4. `docs/roadmap.md` — practical backlog focused on GUI-client enablement.
